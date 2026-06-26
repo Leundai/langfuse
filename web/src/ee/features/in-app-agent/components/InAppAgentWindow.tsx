@@ -9,8 +9,10 @@ import {
   Minus,
   Plus,
   SendHorizontal,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
+import { ConfirmDialog } from "@/src/components/ui/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,6 +96,7 @@ export type InAppAgentWindowProps = {
   isLoadingMoreConversations: boolean;
   messages: InAppAgentWindowMessage[];
   onExpandedChange: (isExpanded: boolean) => void;
+  onDeleteConversation: (conversationId: string) => Promise<void>;
   onLoadMoreConversations: () => void;
   onNewConversation: () => void;
   onSelectConversation: (conversationId: string) => void;
@@ -117,6 +120,7 @@ export function InAppAgentWindow(props: InAppAgentWindowProps) {
     isInputDisabled,
     isLoadingMoreConversations,
     messages,
+    onDeleteConversation,
     onExpandedChange,
     onLoadMoreConversations,
     onNewConversation,
@@ -130,6 +134,11 @@ export function InAppAgentWindow(props: InAppAgentWindowProps) {
   const previousScrollTopRef = useRef(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [input, setInput] = useState("");
+  const [isConversationHistoryOpen, setIsConversationHistoryOpen] =
+    useState(false);
+  const [conversationToDelete, setConversationToDelete] =
+    useState<InAppAgentWindowConversation | null>(null);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
   const hasUserMessage = messages.some((message) => message.role === "user");
 
   const submitInput = (content: string) => {
@@ -183,123 +192,150 @@ export function InAppAgentWindow(props: InAppAgentWindowProps) {
   }, [input]);
 
   return (
-    <section
-      aria-label="Assistant"
-      className="bg-background flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border shadow/5"
-    >
-      <header
-        data-in-app-agent-window-drag-handle={
-          isHeaderDragHandleEnabled ? "true" : undefined
-        }
-        className={cn(
-          "bg-header flex min-h-11.25 shrink-0 items-center justify-between gap-2 border-b px-3 py-1",
-          isHeaderDragHandleEnabled && "cursor-move touch-none select-none",
-        )}
+    <>
+      <ConfirmDialog
+        open={conversationToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConversationToDelete(null);
+          }
+        }}
+        title="Delete conversation"
+        description="This removes the conversation from your recent conversations. This action cannot be undone."
+        confirmLabel="Delete conversation"
+        loading={isDeletingConversation}
+        onConfirm={async () => {
+          if (!conversationToDelete) {
+            return;
+          }
+
+          setIsDeletingConversation(true);
+          try {
+            await onDeleteConversation(conversationToDelete.id);
+            setConversationToDelete(null);
+          } catch {
+            // Error is already surfaced by the provider; keep the dialog open for retry.
+          } finally {
+            setIsDeletingConversation(false);
+          }
+        }}
+      />
+      <section
+        aria-label="Assistant"
+        className="bg-background flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-xl border shadow/5"
       >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <p className="shrink-0 truncate text-sm font-semibold">Assistant</p>
-          <span className="text-muted-foreground rounded border px-1.5 py-1 text-xs leading-none font-medium">
-            Beta
-          </span>
-        </div>
-        <div
-          className="flex shrink-0 items-center gap-0.5"
-          data-movable-resizable-panel-ignore-drag="true"
+        <header
+          data-in-app-agent-window-drag-handle={
+            isHeaderDragHandleEnabled ? "true" : undefined
+          }
+          className={cn(
+            "bg-header flex min-h-11.25 shrink-0 items-center justify-between gap-2 border-b px-3 py-1",
+            isHeaderDragHandleEnabled && "cursor-move touch-none select-none",
+          )}
         >
-          <Tooltip delayDuration={100} disableHoverableContent>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-6 shrink-0"
-                onClick={onNewConversation}
-                disabled={isInputDisabled}
-                aria-label="Start new conversation"
-              >
-                <Plus className="size-3" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Start new conversation</TooltipContent>
-          </Tooltip>
-          <DropdownMenu>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <p className="shrink-0 truncate text-sm font-semibold">Assistant</p>
+            <span className="text-muted-foreground rounded border px-1.5 py-1 text-xs leading-none font-medium">
+              Beta
+            </span>
+          </div>
+          <div
+            className="flex shrink-0 items-center gap-0.5"
+            data-movable-resizable-panel-ignore-drag="true"
+          >
             <Tooltip delayDuration={100} disableHoverableContent>
               <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 shrink-0"
-                    disabled={isInputDisabled}
-                    aria-label="Conversation history"
-                  >
-                    <History className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 shrink-0"
+                  onClick={onNewConversation}
+                  disabled={isInputDisabled}
+                  aria-label="Start new conversation"
+                >
+                  <Plus className="size-3" />
+                </Button>
               </TooltipTrigger>
-              <TooltipContent>Conversation history</TooltipContent>
+              <TooltipContent>Start new conversation</TooltipContent>
             </Tooltip>
-            <DropdownMenuContent
-              align="end"
-              className="max-h-80 w-64 overflow-y-auto"
+            <DropdownMenu
+              open={isConversationHistoryOpen}
+              onOpenChange={setIsConversationHistoryOpen}
             >
-              <DropdownMenuLabel>Recent conversations</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {conversations.length === 0 ? (
-                <DropdownMenuItem disabled>
-                  No conversations yet
-                </DropdownMenuItem>
-              ) : (
-                conversations.map((conversation) => (
-                  <DropdownMenuItem
-                    key={conversation.id}
-                    className={cn(
-                      "truncate",
-                      conversation.id === selectedConversationId &&
-                        "bg-accent text-accent-foreground",
-                    )}
-                    onSelect={() => onSelectConversation(conversation.id)}
-                  >
-                    {conversation.title?.trim() || "Untitled conversation"}
-                  </DropdownMenuItem>
-                ))
-              )}
-              {hasMoreConversations ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={isLoadingMoreConversations}
-                    onSelect={onLoadMoreConversations}
-                  >
-                    {isLoadingMoreConversations ? "Loading..." : "Load more"}
-                  </DropdownMenuItem>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Tooltip delayDuration={100} disableHoverableContent>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-6"
-                aria-label={isExpanded ? "Collapse window" : "Expand window"}
-                onClick={() => onExpandedChange(!isExpanded)}
+              <Tooltip delayDuration={100} disableHoverableContent>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-6 shrink-0"
+                      disabled={isInputDisabled}
+                      aria-label="Conversation history"
+                    >
+                      <History className="size-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Conversation history</TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent
+                align="end"
+                className="max-h-80 w-64 overflow-y-auto"
               >
-                {isExpanded ? (
-                  <Minimize2 className="size-3" />
+                <DropdownMenuLabel>Recent conversations</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {conversations.length === 0 ? (
+                  <DropdownMenuItem disabled>
+                    No conversations yet
+                  </DropdownMenuItem>
                 ) : (
-                  <Maximize2 className="size-3" />
+                  conversations.map((conversation) => (
+                    <DropdownMenuItem
+                      key={conversation.id}
+                      className={cn(
+                        "flex items-center gap-1",
+                        conversation.id === selectedConversationId &&
+                          "bg-accent text-accent-foreground",
+                      )}
+                      onSelect={() => onSelectConversation(conversation.id)}
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {conversation.title?.trim() || "Untitled conversation"}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        disabled={isInputDisabled}
+                        aria-label="Delete conversation"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setIsConversationHistoryOpen(false);
+                          setConversationToDelete(conversation);
+                        }}
+                      >
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </DropdownMenuItem>
+                  ))
                 )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isExpanded ? "Collapse window" : "Expand window"}
-            </TooltipContent>
-          </Tooltip>
-          {props.showCloseButton !== false ? (
+                {hasMoreConversations ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={isLoadingMoreConversations}
+                      onSelect={onLoadMoreConversations}
+                    >
+                      {isLoadingMoreConversations ? "Loading..." : "Load more"}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Tooltip delayDuration={100} disableHoverableContent>
               <TooltipTrigger asChild>
                 <Button
@@ -307,229 +343,253 @@ export function InAppAgentWindow(props: InAppAgentWindowProps) {
                   variant="ghost"
                   size="icon"
                   className="size-6"
-                  aria-label="Minimize assistant"
-                  onClick={props.onClose}
+                  aria-label={isExpanded ? "Collapse window" : "Expand window"}
+                  onClick={() => onExpandedChange(!isExpanded)}
                 >
-                  <Minus className="size-3" />
+                  {isExpanded ? (
+                    <Minimize2 className="size-3" />
+                  ) : (
+                    <Maximize2 className="size-3" />
+                  )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Minimize assistant</TooltipContent>
+              <TooltipContent>
+                {isExpanded ? "Collapse window" : "Expand window"}
+              </TooltipContent>
             </Tooltip>
-          ) : null}
-        </div>
-      </header>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div
-          ref={viewportRef}
-          className="min-h-0 flex-1 overflow-y-auto"
-          onScroll={(event) => {
-            const viewport = event.currentTarget;
-            const distanceFromBottom =
-              viewport.scrollHeight -
-              viewport.scrollTop -
-              viewport.clientHeight;
-            const isNearBottom = distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX;
-            const scrolledUp =
-              viewport.scrollTop <
-              previousScrollTopRef.current - SCROLL_DIRECTION_TOLERANCE_PX;
-
-            if (scrolledUp && !isNearBottom) {
-              isAutoScrollAttachedRef.current = false;
-            } else if (isNearBottom) {
-              isAutoScrollAttachedRef.current = true;
-            }
-
-            previousScrollTopRef.current = viewport.scrollTop;
-          }}
-        >
-          <div
-            className={cn(
-              "flex h-full w-full flex-col py-4",
-              isExpanded && "mx-auto max-w-3xl",
-              isExpanded ? "px-0" : "px-3",
-            )}
-          >
-            {!hasUserMessage ? (
-              <div className="flex h-full w-full flex-1 flex-col items-center justify-center px-2">
-                <div>
-                  <BotMessageSquare className="text-muted-foreground mx-auto h-8 w-8" />
-                </div>
-                <p className="text-muted-foreground mt-4 text-sm">
-                  Welcome to the Langfuse Assistant
-                </p>
-                <p className="text-muted-foreground/60 mt-2 max-w-xs text-center text-sm leading-relaxed">
-                  I can help you with any questions you have about Langfuse or
-                  assist you in exploring your data.
-                  <br />
-                  What do you want to do?
-                </p>
-                <div className="mt-6 flex max-w-sm flex-wrap items-center justify-center gap-2">
-                  {CONVERSATION_STARTERS.map(([label, message]) => (
-                    <button
-                      key={label}
-                      type="button"
-                      className={cn(
-                        "bg-card dark:bg-header text-foreground border-border hover:bg-muted/60 border text-[0.775rem] leading-none shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                        isExpanded
-                          ? "rounded-2xl px-3 py-2"
-                          : "rounded-xl px-2 py-1.5",
-                      )}
-                      disabled={isInputDisabled}
-                      onClick={() => submitInput(message)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <ol className="flex w-full flex-col gap-3 pb-4">
-              {messages.map((message, index) => {
-                const hasFullWidthContent =
-                  message.content.type === "toolGroup" ||
-                  message.content.type === "redirectAction";
-
-                const nextUserMessageIndex = messages.findIndex(
-                  (nextMessage, nextIndex) =>
-                    nextIndex > index && nextMessage.role === "user",
-                );
-                const nextTurnStartIndex =
-                  nextUserMessageIndex === -1
-                    ? messages.length
-                    : nextUserMessageIndex;
-                const isLastMessageOfTurn = messages
-                  .slice(index + 1, nextTurnStartIndex)
-                  .every((nextMessage) => nextMessage.role !== "assistant");
-                const feedbackRunId =
-                  message.role === "assistant" &&
-                  message.content.type === "text" &&
-                  isLastMessageOfTurn
-                    ? message.runId
-                    : undefined;
-
-                return (
-                  <li
-                    key={message.id}
-                    className={cn(
-                      "max-w-[92%]",
-                      hasFullWidthContent ? "w-full" : "w-fit",
-                      message.role === "user" && "ml-auto",
-                    )}
+            {props.showCloseButton !== false ? (
+              <Tooltip delayDuration={100} disableHoverableContent>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    aria-label="Minimize assistant"
+                    onClick={props.onClose}
                   >
-                    <InAppAgentMessage
-                      role={message.role}
-                      content={message.content}
-                      isCompact={!isExpanded}
-                      isFeedbackDisabled={isInputDisabled}
-                      onSubmitFeedback={
-                        feedbackRunId
-                          ? (params) =>
-                              onSubmitFeedback({
-                                messageId: message.id,
-                                runId: feedbackRunId,
-                                ...params,
-                              })
-                          : undefined
-                      }
-                    />
-                  </li>
-                );
-              })}
-            </ol>
-
-            {error ? (
-              <div
-                role="alert"
-                className={cn(
-                  "border-destructive/40 dark:bg-destructive dark:border-destructive-foreground/20 bg-destructive/10 dark:text-destructive-foreground text-destructive rounded-lg border px-2 py-1",
-                  isExpanded ? "text-sm" : "text-xs",
-                )}
-              >
-                {error}
-              </div>
+                    <Minus className="size-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Minimize assistant</TooltipContent>
+              </Tooltip>
             ) : null}
           </div>
-        </div>
-        <div
-          className={cn(
-            "p-1.5",
-            isExpanded ? "pt-0" : "bg-header",
-            !isExpanded && hasUserMessage && "border-t",
-          )}
-        >
-          <form
-            className={cn(
-              "relative flex w-full items-end gap-2 rounded-md",
-              isExpanded &&
-                "mx-auto max-w-3xl cursor-text flex-col border focus-within:ring focus-within:ring-blue-500 focus-within:ring-offset-0",
-            )}
-            onClick={() => {
-              if (isExpanded) {
-                inputRef.current?.focus();
+        </header>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div
+            ref={viewportRef}
+            className="min-h-0 flex-1 overflow-y-auto"
+            onScroll={(event) => {
+              const viewport = event.currentTarget;
+              const distanceFromBottom =
+                viewport.scrollHeight -
+                viewport.scrollTop -
+                viewport.clientHeight;
+              const isNearBottom =
+                distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX;
+              const scrolledUp =
+                viewport.scrollTop <
+                previousScrollTopRef.current - SCROLL_DIRECTION_TOLERANCE_PX;
+
+              if (scrolledUp && !isNearBottom) {
+                isAutoScrollAttachedRef.current = false;
+              } else if (isNearBottom) {
+                isAutoScrollAttachedRef.current = true;
               }
-            }}
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitInput(input);
+
+              previousScrollTopRef.current = viewport.scrollTop;
             }}
           >
-            <textarea
-              autoFocus={!isExpanded}
-              ref={inputRef}
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
-                if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  !event.nativeEvent.isComposing
-                ) {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
+            <div
+              className={cn(
+                "flex h-full w-full flex-col py-4",
+                isExpanded && "mx-auto max-w-3xl",
+                isExpanded ? "px-0" : "px-3",
+              )}
+            >
+              {!hasUserMessage ? (
+                <div className="flex h-full w-full flex-1 flex-col items-center justify-center px-2">
+                  <div>
+                    <BotMessageSquare className="text-muted-foreground mx-auto h-8 w-8" />
+                  </div>
+                  <p className="text-muted-foreground mt-4 text-sm">
+                    Welcome to the Langfuse Assistant
+                  </p>
+                  <p className="text-muted-foreground/60 mt-2 max-w-xs text-center text-sm leading-relaxed">
+                    I can help you with any questions you have about Langfuse or
+                    assist you in exploring your data.
+                    <br />
+                    What do you want to do?
+                  </p>
+                  <div className="mt-6 flex max-w-sm flex-wrap items-center justify-center gap-2">
+                    {CONVERSATION_STARTERS.map(([label, message]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className={cn(
+                          "bg-card dark:bg-header text-foreground border-border hover:bg-muted/60 border text-[0.775rem] leading-none shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                          isExpanded
+                            ? "rounded-2xl px-3 py-2"
+                            : "rounded-xl px-2 py-1.5",
+                        )}
+                        disabled={isInputDisabled}
+                        onClick={() => submitInput(message)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <ol className="flex w-full flex-col gap-3 pb-4">
+                {messages.map((message, index) => {
+                  const hasFullWidthContent =
+                    message.content.type === "toolGroup" ||
+                    message.content.type === "redirectAction";
+
+                  const nextUserMessageIndex = messages.findIndex(
+                    (nextMessage, nextIndex) =>
+                      nextIndex > index && nextMessage.role === "user",
+                  );
+                  const nextTurnStartIndex =
+                    nextUserMessageIndex === -1
+                      ? messages.length
+                      : nextUserMessageIndex;
+                  const isLastMessageOfTurn = messages
+                    .slice(index + 1, nextTurnStartIndex)
+                    .every((nextMessage) => nextMessage.role !== "assistant");
+                  const feedbackRunId =
+                    message.role === "assistant" &&
+                    message.content.type === "text" &&
+                    isLastMessageOfTurn
+                      ? message.runId
+                      : undefined;
+
+                  return (
+                    <li
+                      key={message.id}
+                      className={cn(
+                        "max-w-[92%]",
+                        hasFullWidthContent ? "w-full" : "w-fit",
+                        message.role === "user" && "ml-auto",
+                      )}
+                    >
+                      <InAppAgentMessage
+                        role={message.role}
+                        content={message.content}
+                        isCompact={!isExpanded}
+                        isFeedbackDisabled={isInputDisabled}
+                        onSubmitFeedback={
+                          feedbackRunId
+                            ? (params) =>
+                                onSubmitFeedback({
+                                  messageId: message.id,
+                                  runId: feedbackRunId,
+                                  ...params,
+                                })
+                            : undefined
+                        }
+                      />
+                    </li>
+                  );
+                })}
+              </ol>
+
+              {error ? (
+                <div
+                  role="alert"
+                  className={cn(
+                    "border-destructive/40 dark:bg-destructive dark:border-destructive-foreground/20 bg-destructive/10 dark:text-destructive-foreground text-destructive rounded-lg border px-2 py-1",
+                    isExpanded ? "text-sm" : "text-xs",
+                  )}
+                >
+                  {error}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div
+            className={cn(
+              "p-1.5",
+              isExpanded ? "pt-0" : "bg-header",
+              !isExpanded && hasUserMessage && "border-t",
+            )}
+          >
+            <form
+              className={cn(
+                "relative flex w-full items-end gap-2 rounded-md",
+                isExpanded &&
+                  "mx-auto max-w-3xl cursor-text flex-col border focus-within:ring focus-within:ring-blue-500 focus-within:ring-offset-0",
+              )}
+              onClick={() => {
+                if (isExpanded) {
+                  inputRef.current?.focus();
                 }
               }}
-              disabled={isInputDisabled}
-              aria-label="Ask the assistant a question"
-              placeholder="Ask the assistant a question..."
-              rows={1}
-              className={cn(
-                "bg-background placeholder:text-muted-foreground w-full flex-1 resize-none overflow-y-auto rounded-md text-sm leading-5 disabled:cursor-not-allowed disabled:opacity-60",
-                isExpanded
-                  ? "max-h-40 min-h-14 border-none ring-0"
-                  : "border-input max-h-40 min-h-8 px-3 py-1",
-              )}
-            />
-            {!isExpanded && (
-              <Button
-                type="submit"
-                size="icon"
-                className="h-8 w-8 rounded-md border"
-                aria-label="Send message"
-                disabled={isInputDisabled || !input.trim()}
-              >
-                <SendHorizontal className="h-4 w-4" />
-              </Button>
-            )}
-
-            {isExpanded && (
-              <div className="flex w-full justify-end p-1">
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitInput(input);
+              }}
+            >
+              <textarea
+                autoFocus={!isExpanded}
+                ref={inputRef}
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing
+                  ) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                disabled={isInputDisabled}
+                aria-label="Ask the assistant a question"
+                placeholder="Ask the assistant a question..."
+                rows={1}
+                className={cn(
+                  "bg-background placeholder:text-muted-foreground w-full flex-1 resize-none overflow-y-auto rounded-md text-sm leading-5 disabled:cursor-not-allowed disabled:opacity-60",
+                  isExpanded
+                    ? "max-h-40 min-h-14 border-none ring-0"
+                    : "border-input max-h-40 min-h-8 px-3 py-1",
+                )}
+              />
+              {!isExpanded && (
                 <Button
                   type="submit"
-                  className="h-8 w-fit rounded-md px-3"
+                  size="icon"
+                  className="h-8 w-8 rounded-md border"
                   aria-label="Send message"
                   disabled={isInputDisabled || !input.trim()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
                 >
-                  Send <SendHorizontal className="ml-2 h-4 w-4" />
+                  <SendHorizontal className="h-4 w-4" />
                 </Button>
-              </div>
-            )}
-          </form>
+              )}
+
+              {isExpanded && (
+                <div className="flex w-full justify-end p-1">
+                  <Button
+                    type="submit"
+                    className="h-8 w-fit rounded-md px-3"
+                    aria-label="Send message"
+                    disabled={isInputDisabled || !input.trim()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    Send <SendHorizontal className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </form>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

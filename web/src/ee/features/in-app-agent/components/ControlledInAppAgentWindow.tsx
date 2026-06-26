@@ -36,6 +36,7 @@ export function ControlledInAppAgentWindow(
     isSubmitting,
     loadMoreConversations,
     messages,
+    deleteConversation,
     selectConversation,
     selectedConversationId,
     submit,
@@ -66,6 +67,7 @@ export function ControlledInAppAgentWindow(
       isLoadingMoreConversations={isLoadingMoreConversations}
       selectedConversationId={selectedConversationId}
       onLoadMoreConversations={loadMoreConversations}
+      onDeleteConversation={deleteConversation}
       onSelectConversation={selectConversation}
       onNewConversation={() => selectConversation(null)}
       onExpandedChange={props.onExpandedChange}
