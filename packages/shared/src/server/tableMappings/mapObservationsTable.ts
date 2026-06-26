@@ -201,6 +201,24 @@ export const observationsTableUiColumnDefinitions: UiColumnMappings = [
     clickhouseTableName: "observations",
     clickhouseSelect: 'o."metadata"',
   },
+  {
+    uiTableName: "Ingestion API Key",
+    uiTableId: "ingestionApiKey",
+    clickhouseTableName: "observations",
+    clickhouseSelect: 'o."ingestion_api_key"',
+  },
+  {
+    uiTableName: "Ingestion SDK Name",
+    uiTableId: "ingestionSdkName",
+    clickhouseTableName: "observations",
+    clickhouseSelect: 'o."ingestion_sdk_name"',
+  },
+  {
+    uiTableName: "Ingestion SDK Version",
+    uiTableId: "ingestionSdkVersion",
+    clickhouseTableName: "observations",
+    clickhouseSelect: 'o."ingestion_sdk_version"',
+  },
   // Scores column duplicated to allow renaming column name. Will be removed once session storage cache is outdated
   // Column names are cached in user sessions - changing them breaks existing filters
   {

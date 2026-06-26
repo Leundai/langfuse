@@ -228,6 +228,26 @@ const eventsTableColsDefinition = [
     internal: "e.metadata",
   },
   {
+    name: "Ingestion API Key",
+    id: "ingestionApiKey",
+    type: "string",
+    internal: "e.ingestion_api_key",
+  },
+  {
+    name: "Ingestion SDK Name",
+    id: "ingestionSdkName",
+    type: "stringOptions",
+    internal: "e.ingestion_sdk_name",
+    options: [],
+  },
+  {
+    name: "Ingestion SDK Version",
+    id: "ingestionSdkVersion",
+    type: "stringOptions",
+    internal: "e.ingestion_sdk_version",
+    options: [],
+  },
+  {
     name: "Trace Tags",
     id: "traceTags",
     type: "arrayOptions",

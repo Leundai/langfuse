@@ -49,6 +49,26 @@ export const scoresTableCols: ColumnDefinition[] = [
     options: ScoreSourceArray.map((value) => ({ value })),
   },
   {
+    name: "Ingestion API Key",
+    id: "ingestionApiKey",
+    type: "string",
+    internal: 's."ingestion_api_key"',
+  },
+  {
+    name: "Ingestion SDK Name",
+    id: "ingestionSdkName",
+    type: "stringOptions",
+    internal: 's."ingestion_sdk_name"',
+    options: [],
+  },
+  {
+    name: "Ingestion SDK Version",
+    id: "ingestionSdkVersion",
+    type: "stringOptions",
+    internal: 's."ingestion_sdk_version"',
+    options: [],
+  },
+  {
     name: "Data Type",
     id: "dataType",
     type: "stringOptions",

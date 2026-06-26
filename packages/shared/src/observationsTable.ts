@@ -185,6 +185,26 @@ export const observationsTableCols: ColumnDefinition[] = [
     internal: 'o."metadata"',
   },
   {
+    name: "Ingestion API Key",
+    id: "ingestionApiKey",
+    type: "string",
+    internal: 'o."ingestion_api_key"',
+  },
+  {
+    name: "Ingestion SDK Name",
+    id: "ingestionSdkName",
+    type: "stringOptions",
+    internal: 'o."ingestion_sdk_name"',
+    options: [],
+  },
+  {
+    name: "Ingestion SDK Version",
+    id: "ingestionSdkVersion",
+    type: "stringOptions",
+    internal: 'o."ingestion_sdk_version"',
+    options: [],
+  },
+  {
     name: "Scores (numeric)",
     id: "scores_avg",
     type: "numberObject",
@@ -286,6 +306,8 @@ export type ObservationOptions = {
   type: Array<SingleValueOption>;
   toolNames: Array<SingleValueOption>;
   calledToolNames: Array<SingleValueOption>;
+  ingestionSdkName?: Array<SingleValueOption>;
+  ingestionSdkVersion?: Array<SingleValueOption>;
 };
 
 export function observationsTableColsWithOptions(
@@ -327,6 +349,12 @@ export function observationsTableColsWithOptions(
     }
     if (col.id === "calledToolNames") {
       return formatColumnOptions(col, options?.calledToolNames ?? []);
+    }
+    if (col.id === "ingestionSdkName") {
+      return formatColumnOptions(col, options?.ingestionSdkName ?? []);
+    }
+    if (col.id === "ingestionSdkVersion") {
+      return formatColumnOptions(col, options?.ingestionSdkVersion ?? []);
     }
     return col;
   });

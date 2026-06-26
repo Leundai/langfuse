@@ -65,6 +65,27 @@ export const scoresTableUiColumnDefinitions: UiColumnMappings = [
     queryPrefix: "s",
   },
   {
+    uiTableName: "Ingestion API Key",
+    uiTableId: "ingestionApiKey",
+    clickhouseTableName: "scores",
+    clickhouseSelect: "ingestion_api_key",
+    queryPrefix: "s",
+  },
+  {
+    uiTableName: "Ingestion SDK Name",
+    uiTableId: "ingestionSdkName",
+    clickhouseTableName: "scores",
+    clickhouseSelect: "ingestion_sdk_name",
+    queryPrefix: "s",
+  },
+  {
+    uiTableName: "Ingestion SDK Version",
+    uiTableId: "ingestionSdkVersion",
+    clickhouseTableName: "scores",
+    clickhouseSelect: "ingestion_sdk_version",
+    queryPrefix: "s",
+  },
+  {
     uiTableName: "Comment",
     uiTableId: "comment",
     clickhouseTableName: "scores",
